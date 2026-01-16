@@ -1,0 +1,109 @@
+# =============================================================================
+# KoliBri Migration Test Workflow
+# =============================================================================
+# This workflow performs the migration and then checks code quality.
+# It is triggered on push and pull requests to the main branch.
+# =============================================================================
+
+name: Migration Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Migration and Quality Checks
+  # ---------------------------------------------------------------------------
+  migration-test:
+    name: Migration & Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      # -----------------------------------------------------------------------
+      # 1. SETUP
+      # -----------------------------------------------------------------------
+      # Checkout repository and setup Node.js with pnpm
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      # -----------------------------------------------------------------------
+      # 2. INSTALL DEPENDENCIES
+      # -----------------------------------------------------------------------
+
+      - name: Install dependencies
+        run: pnpm i
+
+      # -----------------------------------------------------------------------
+      # 3. RUN MIGRATION
+      # -----------------------------------------------------------------------
+      # Runs the KoliBri CLI migration followed by the fix.sh script:
+      # - npx @public-ui/kolibri-cli migrate src: Automatic code migration
+      # - fix.sh: Additional cleanup (deprecated components, themes, etc.)
+
+      - name: Run KoliBri CLI migration
+        run: CI=false npx @public-ui/kolibri-cli@latest migrate src
+
+      - name: Run fix script
+        run: |
+          chmod +x fix.sh
+          ./fix.sh
+
+      # -----------------------------------------------------------------------
+      # 4. QUALITY CHECKS
+      # -----------------------------------------------------------------------
+      # Runs various quality checks
+
+      # - name: TypeScript type check
+      #   run: pnpm lint:tsc
+
+      # - name: ESLint check
+      #   run: pnpm lint:eslint
+
+      # - name: Stylelint check
+      #   run: pnpm lint:stylelint
+
+      - name: Prettier format check
+        run: pnpm format
+
+      # -----------------------------------------------------------------------
+      # 5. BUILD
+      # -----------------------------------------------------------------------
+      # Builds the application to ensure everything compiles
+
+      - name: Build application
+        run: pnpm build
+
+      # -----------------------------------------------------------------------
+      # 6. E2E TESTS
+      # -----------------------------------------------------------------------
+      # Runs End-to-End tests with Playwright
+
+      # - name: Install Playwright browsers
+      #   run: pnpm exec playwright install chromium
+
+      # - name: Run E2E tests
+      #   run: pnpm test:e2e
+
+      # - name: Upload Playwright report
+      #   uses: actions/upload-artifact@v4
+      #   if: failure()
+      #   with:
+      #     name: playwright-report
+      #     path: playwright-report/
+      #     retention-days: 7
